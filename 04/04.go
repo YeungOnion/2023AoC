@@ -7,10 +7,12 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+
+	"github.com/samber/lo"
 )
 
 func main() {
-	filename := "03/input.txt"
+	filename := "04/input.txt"
 	digitsRe := regexp.MustCompile(`\d+`)
 	NumberString := func(s string) bool { return digitsRe.MatchString(s) }
 	NumberStringer := func(s string) int {
@@ -31,21 +33,47 @@ func main() {
 	fileScanner.Split(bufio.ScanWords)
 
 	// lets get this bread
-	winnings := 0
+	pointWinnings := 0
+	cardCount := make(map[int]int, 200)
 
 	// first two words are "Card", "\d+:", discard both
 	fileScanner.Scan()       // consume first "Card"
 	for fileScanner.Scan() { // consume "\d+:"
+		cardNum, err := strconv.Atoi(digitsRe.FindString(fileScanner.Text()))
+		if err != nil {
+			panic("error while processing card number " + fileScanner.Text())
+		}
+
+		cardCount[cardNum]++
+
 		// consume words that are digit sequences (and the delimiting "|")
 		myNumbers := ScanWhile[int](fileScanner, NumberString, NumberStringer)
 		// consume words that are digit sequences (as well as "\nCard")
 		winningNumbers := ScanWhile[int](fileScanner, NumberString, NumberStringer)
-		if count := winningNumbers.CountMatches(myNumbers); count > 0 {
-			winnings += 1 << (count - 1)
+
+		countMatches := winningNumbers.CountMatches(myNumbers)
+
+		// solves part A
+		if countMatches > 0 {
+			pointWinnings += 1 << (countMatches - 1)
+		}
+
+		// solves part B
+		for i := 1; i <= countMatches; i++ {
+			cardCount[cardNum+i] += cardCount[cardNum]
 		}
 	}
 
-	fmt.Println(winnings)
+	fmt.Println("winnings:", pointWinnings)
+	fmt.Println(
+		"num of cards",
+		lo.Reduce(
+			lo.MapToSlice(cardCount, func(k int, v int) int { return v }),
+			func(agg int, item int, _ int) int {
+				return agg + item
+			},
+			0),
+	)
 
 }
 

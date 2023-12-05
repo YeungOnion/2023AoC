@@ -53,7 +53,7 @@ func TestAdjacentColumn(t *testing.T) {
 
 	for _, test := range tests {
 		// got := cal
-		got := AdjacentColumn(test.pos, test.cmp)
+		got := AdjacentColumn(test.pos, test.cmp, regexp.MustCompile(`[^\d\.]`))
 		if got != test.exp {
 			t.Fatalf("\n%s\n%s\n", test.in, test.cmp)
 			t.Fatalf("got %v, expected %v\n", got, test.exp)
@@ -102,8 +102,8 @@ func TestGivenMiddleRow(t *testing.T) {
 
 	for _, test := range tests {
 		// assert number of matches since testing
-		index := GetNumberIndexes(test.in[1])[0]
-		if HasNeighborSymbol(index, test.in) != test.expected {
+		index := GetTargetIndexes(test.in[1])[0]
+		if HasNeighborPeripherals(index, test.in) != test.expected {
 			out := fmt.Sprintf("expected match? = %v, assertion failed with input\n", test.expected)
 			out += strings.Join(test.in, "\n")
 			t.Fatal(out)

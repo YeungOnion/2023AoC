@@ -26,12 +26,6 @@ func TestAdjacentColumn(t *testing.T) {
 			exp: true,
 		},
 		{
-			cmp: "*....?.", // [][]int {{0,1},{6,7}}
-			in:  "..123*.",
-			pos: []int{2, 5},
-			exp: true,
-		},
-		{
 			cmp: "*....?.", // [][]int{{0,1},{5,6}}
 			in:  "..123*.",
 			pos: []int{2, 5},

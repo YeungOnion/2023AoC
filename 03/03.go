@@ -21,7 +21,7 @@ func main() {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	// read first two lines
+	// prep first line for scoring
 	lines := make([]string, 3, 3)
 	_, lines[1] = fileScanner.Scan(), fileScanner.Text()
 	_, lines[2] = fileScanner.Scan(), fileScanner.Text()
@@ -30,15 +30,12 @@ func main() {
 	score := ScoreMiddleLine(lines)
 
 	for fileScanner.Scan() {
-		lines[0] = lines[1]
-		lines[1] = lines[2]
-		lines[2] = fileScanner.Text()
-
+		lines[0], lines[1], lines[2] = lines[1], lines[2], fileScanner.Text()
 		score += ScoreMiddleLine(lines)
 	}
-	lines[0] = lines[1]
-	lines[1] = lines[2]
-	lines[2] = strings.Repeat(".", len(lines[1]))
+
+	lines[0], lines[1], lines[2] = lines[1], lines[2], strings.Repeat(".", len(lines[1]))
+	score += ScoreMiddleLine(lines)
 
 	fmt.Println("score: ", score)
 }
@@ -50,7 +47,9 @@ func ScoreMiddleLine(lines []string) int {
 		if err != nil {
 			panic("cannot convert digit sequence to number")
 		}
-		score += number
+		if HasNeighborSymbol(index, lines) {
+			score += number
+		}
 	}
 	return score
 }
@@ -61,6 +60,8 @@ func HasNeighborSymbol(index []int, neighborLines []string) bool {
 	})
 }
 
+// GetNumberIndexes returns indices of all matches for the digit sequence
+// provided a single string
 func GetNumberIndexes(numberRow string) [][]int {
 	digitRe := regexp.MustCompile(`\d+`)
 	return digitRe.FindAllStringIndex(string(numberRow), -1)

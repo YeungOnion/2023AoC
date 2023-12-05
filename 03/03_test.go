@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -108,6 +111,46 @@ func TestGivenMiddleRow(t *testing.T) {
 			out += strings.Join(test.in, "\n")
 			t.Fatal(out)
 		}
+	}
+
+}
+
+func TestSample(t *testing.T) {
+	exp := 4361
+	infile := "sample.txt"
+
+	// stream file by words
+	file, err := os.Open(infile)
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	got := ScanAndScore(fileScanner)
+	if exp != got {
+		t.Fatalf("expected %d, got %d", exp, got)
+	}
+
+}
+
+func TestPartA(t *testing.T) {
+	exp := 539590
+	infile := "input.txt"
+
+	// stream file by words
+	file, err := os.Open(infile)
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	got := ScanAndScore(fileScanner)
+	if exp != got {
+		t.Fatalf("expected %d, got %d", exp, got)
 	}
 
 }

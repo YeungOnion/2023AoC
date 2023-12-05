@@ -31,29 +31,35 @@ func main() {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	fmt.Println("score: ", ScanAndScore(fileScanner))
+	partScore, gearScore := ScanAndScore(fileScanner)
+	fmt.Println("score: ", partScore)
+	fmt.Println("gear: ", gearScore)
 }
 
 // ScanAndScore computes score for a Scanner
 // assumes that scanner has not yet made call to Scan
-func ScanAndScore(fs *bufio.Scanner) int {
+func ScanAndScore(fs *bufio.Scanner) (int, int) {
+	var partScore, gearScore int
 	lines := make([]string, 3, 3)
 
 	// process top edge / first line
 	PrepTopEdge(fs, lines)
-	score := ScoreMiddleLine(lines)
+	partScore = ScorePartsMiddleLine(lines)
+	// gearScore = ScoreGearRatioMiddleLine(lines)
 
 	// iterate file linewise
 	for fs.Scan() {
 		lines[0], lines[1], lines[2] = lines[1], lines[2], fs.Text()
-		score += ScoreMiddleLine(lines)
+		partScore += ScorePartsMiddleLine(lines)
+		// gearScore += ScoreGearRatioMiddleLine(lines)
 	}
 
 	// process bottom edge / last line
 	PrepBottomEdge(fs, lines)
-	score += ScoreMiddleLine(lines)
+	partScore += ScorePartsMiddleLine(lines)
+	// gearScore += ScoreGearRatioMiddleLine(lines)
 
-	return score
+	return partScore, gearScore
 }
 
 // PrepTopEdge gets input from Scanner and modifies lines slice
@@ -86,41 +92,74 @@ func EmptyString(count int) string {
 	return strings.Repeat(".", count)
 }
 
-// ScoreMiddleLine computes the score of a line given 3 lines
+// ScorePartsMiddleLine computes the score of a line given 3 lines
 // as a slice - they should be in order of appearance
-func ScoreMiddleLine(lines []string) int {
+func ScorePartsMiddleLine(lines []string) int {
 	score := 0
-	for _, index := range GetTargetIndexes(lines[1]) {
+	periphRe := regexp.MustCompile(`[^\d\.]`)
+	targetRe := regexp.MustCompile(`\d+`)
+	for _, index := range GetTargetIndexes(lines[1], targetRe) {
 		number, err := strconv.Atoi(lines[1][index[0]:index[1]])
 		if err != nil {
 			panic("cannot convert digit sequence to number")
 		}
-		if HasNeighborPeripherals(index, lines) {
+		if HasNeighborPeripherals(index, lines, periphRe) {
 			score += number
 		}
 	}
 	return score
 }
 
-// HasNeighborPeripherals identifies if any of the provided lines
-// are column adjacent to the indices specified
-func HasNeighborPeripherals(index []int, neighborLines []string) bool {
-	periphRe := regexp.MustCompile(`[^\d\.]`)
-	return Any(neighborLines, func(line string) bool {
-		return AdjacentColumn(index, line, periphRe)
+// ScoreGearRatioMiddleLine computes the score of a line given 3 lines
+// as a slice - they should be in order of appearance
+func ScoreGearRatioMiddleLine(lines []string) int {
+	score := 0
+	periphRe := regexp.MustCompile(`\d+`)
+	targetRe := regexp.MustCompile(`\*`)
+	for _, index := range GetTargetIndexes(lines[1], targetRe) {
+		// for each target, check if has neighboring peripherals
+		number, err := strconv.Atoi(lines[1][index[0]:index[1]])
+		if err != nil {
+			panic("cannot convert digit sequence to number")
+		}
+		if HasNeighborPeripherals(index, lines, periphRe) {
+			score += number
+		}
+	}
+	return score
+}
+
+// HasNeighborPeripherals identifies if any of the provided lines have
+// peripherals defined by regex are column adjacent to the indices specified
+func HasNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) bool {
+	return Any(lines, func(l string) bool {
+		return AdjacentColumn(index, l, periphRe)
+	})
+}
+
+// CountNeighborPeripherals returns number of peripherals defined
+// by regex given lines and indices of target for middle line
+func CountNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) int {
+	return Count(lines, func(l string) bool {
+		return AdjacentColumn(index, l, periphRe)
+	})
+}
+
+// NeighborPeripherals returns slices of index pairs for peripherals defined
+// by regex given lines and indices of target for middle line
+func NeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) int {
+	// indices := make([][]int, 0)
+	// for _, line := range lines {
+
+	// }
+	return Count(lines, func(l string) bool {
+		return AdjacentColumn(index, l, periphRe)
 	})
 }
 
 // GetTargetIndexes returns indices of all matches for the digit sequence
 // provided a single string
-func GetTargetIndexes(numberRow string) [][]int {
-
-	// target in part A was digit sequences
-	targetRe := regexp.MustCompile(`\d+`)
-
-	// // target in part B is literal asterisk
-	// targetRe := regexp.MustCompile(`\*`)
-
+func GetTargetIndexes(numberRow string, targetRe *regexp.Regexp) [][]int {
 	return targetRe.FindAllStringIndex(string(numberRow), -1)
 }
 

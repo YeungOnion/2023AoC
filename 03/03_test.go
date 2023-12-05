@@ -64,7 +64,7 @@ func TestAdjacentColumn(t *testing.T) {
 	}
 }
 
-func TestGivenMiddleRow(t *testing.T) {
+func TestHasNeighborsPartA(t *testing.T) {
 	tests := []struct {
 		in       []string
 		expected bool
@@ -103,10 +103,12 @@ func TestGivenMiddleRow(t *testing.T) {
 		},
 	}
 
+	periphRe := regexp.MustCompile(`[^\d\.]`)
+	targetRe := regexp.MustCompile(`\d+`)
 	for _, test := range tests {
 		// assert number of matches since testing
-		index := GetTargetIndexes(test.in[1])[0]
-		if HasNeighborPeripherals(index, test.in) != test.expected {
+		index := GetTargetIndexes(test.in[1], targetRe)[0]
+		if HasNeighborPeripherals(index, test.in, periphRe) != test.expected {
 			out := fmt.Sprintf("expected match? = %v, assertion failed with input\n", test.expected)
 			out += strings.Join(test.in, "\n")
 			t.Fatal(out)
@@ -115,7 +117,71 @@ func TestGivenMiddleRow(t *testing.T) {
 
 }
 
-func TestSample(t *testing.T) {
+func TestCountNeighborsPartB(t *testing.T) {
+	tests := []struct {
+		in       []string
+		expected int
+	}{
+		{
+			in: []string{
+				".......",
+				"..123*.",
+				".....?.",
+			},
+			expected: 1,
+		},
+		{
+			in: []string{
+				".......",
+				"*....?.",
+				"..123..",
+			},
+			expected: 0,
+		},
+		{
+			in: []string{
+				".132...",
+				"*.....?",
+				"..123..",
+			},
+			expected: 1,
+		},
+		{
+			in: []string{
+				"..123..",
+				"..123*.",
+				".......",
+			},
+			expected: 2,
+		},
+		{
+			in: []string{
+				"..123..",
+				"..123*.",
+				"..123..",
+			},
+			expected: 3,
+		},
+	}
+
+	periphRe := regexp.MustCompile(`\d+`)
+	targetRe := regexp.MustCompile(`\*`)
+	for _, test := range tests {
+		// assert number of matches since testing
+		index := GetTargetIndexes(test.in[1], targetRe)[0]
+		got := CountNeighborPeripherals(index, test.in, periphRe)
+		if got != test.expected {
+			out := fmt.Sprintf("expected %d, got %d\n", test.expected, got)
+			out += strings.Join(test.in, "\n")
+			t.Fatal(out)
+		} else {
+			t.Log("passed case")
+		}
+	}
+
+}
+
+func TestSamplePartA(t *testing.T) {
 	exp := 4361
 	infile := "sample.txt"
 
@@ -128,9 +194,9 @@ func TestSample(t *testing.T) {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	got := ScanAndScore(fileScanner)
-	if exp != got {
-		t.Fatalf("expected %d, got %d", exp, got)
+	gotPart, _ := ScanAndScore(fileScanner)
+	if exp != gotPart {
+		t.Fatalf("expected %d, got %d", exp, gotPart)
 	}
 
 }
@@ -148,9 +214,8 @@ func TestPartA(t *testing.T) {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	got := ScanAndScore(fileScanner)
-	if exp != got {
-		t.Fatalf("expected %d, got %d", exp, got)
+	gotPart, _ := ScanAndScore(fileScanner)
+	if exp != gotPart {
+		t.Fatalf("expected %d, got %d", exp, gotPart)
 	}
-
 }

@@ -45,19 +45,19 @@ func ScanAndScore(fs *bufio.Scanner) (int, int) {
 	// process top edge / first line
 	PrepTopEdge(fs, lines)
 	partScore = ScorePartsMiddleLine(lines)
-	// gearScore = ScoreGearRatioMiddleLine(lines)
+	gearScore = ScoreGearRatioMiddleLine(lines)
 
 	// iterate file linewise
 	for fs.Scan() {
 		lines[0], lines[1], lines[2] = lines[1], lines[2], fs.Text()
 		partScore += ScorePartsMiddleLine(lines)
-		// gearScore += ScoreGearRatioMiddleLine(lines)
+		gearScore += ScoreGearRatioMiddleLine(lines)
 	}
 
 	// process bottom edge / last line
 	PrepBottomEdge(fs, lines)
 	partScore += ScorePartsMiddleLine(lines)
-	// gearScore += ScoreGearRatioMiddleLine(lines)
+	gearScore += ScoreGearRatioMiddleLine(lines)
 
 	return partScore, gearScore
 }
@@ -78,9 +78,9 @@ func PrepTopEdge(fs *bufio.Scanner, lines []string) {
 // assumes no more input on Scanner, but used as arg for convenience
 // panics if there is more input
 func PrepBottomEdge(fs *bufio.Scanner, lines []string) {
-	// if !(!fs.Scan() && fs.Err() == nil) {
-	// 	panic("PrepBottomEdge: expects Scanner buffer to be at EOF without errors")
-	// }
+	if !(!fs.Scan() && fs.Err() == nil) {
+		panic("PrepBottomEdge: expects Scanner buffer to be at EOF without errors")
+	}
 	lines[0], lines[1] = lines[1], lines[2]
 	lines[2] = EmptyString(len(lines[1]))
 	return
@@ -116,45 +116,64 @@ func ScoreGearRatioMiddleLine(lines []string) int {
 	score := 0
 	periphRe := regexp.MustCompile(`\d+`)
 	targetRe := regexp.MustCompile(`\*`)
+	// for each target...
 	for _, index := range GetTargetIndexes(lines[1], targetRe) {
-		// for each target, check if has neighboring peripherals
-		number, err := strconv.Atoi(lines[1][index[0]:index[1]])
-		if err != nil {
-			panic("cannot convert digit sequence to number")
-		}
-		if HasNeighborPeripherals(index, lines, periphRe) {
-			score += number
+		nb := NeighborPeripherals(index, lines, periphRe)
+		// where there are two peripherals
+		if len(nb) == 2 {
+			a, _ := strconv.Atoi(lines[nb[0][2]][nb[0][0]:nb[0][1]])
+			b, _ := strconv.Atoi(lines[nb[1][2]][nb[1][0]:nb[1][1]])
+			score += a * b
 		}
 	}
 	return score
+}
+
+// NeighborPeripherals returns slice of peripherals index and line, peripheral described by regex
+// compared to provided lines
+// regex match corresponds to lines via
+// ```
+// nbs := NeighborPeripherals(targetIdx, lines, periphRe)
+//
+//	for _, nb := range nbs {
+//	  lines[nb[2]][nb[0]:nb[1]]
+//	}
+//
+// ```
+// Note that this matches the convention of indices returned by regexp in that,
+// 0 and 1 are half open start and end positions of the match
+func NeighborPeripherals(index []int, lines []string, perhiphRe *regexp.Regexp) [][]int {
+	indices := make([][]int, 0, 2)
+	for i, line := range lines {
+		for _, periphIndex := range perhiphRe.FindAllStringIndex(line, -1) {
+			if AdjacentColumn(index, periphIndex) {
+				indices = append(indices, append(periphIndex, i))
+			}
+		}
+	}
+
+	return indices
+
 }
 
 // HasNeighborPeripherals identifies if any of the provided lines have
 // peripherals defined by regex are column adjacent to the indices specified
 func HasNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) bool {
 	return Any(lines, func(l string) bool {
-		return AdjacentColumn(index, l, periphRe)
+		return AnyAdjacentColumn(index, l, periphRe)
 	})
 }
 
 // CountNeighborPeripherals returns number of peripherals defined
 // by regex given lines and indices of target for middle line
 func CountNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) int {
-	return Count(lines, func(l string) bool {
-		return AdjacentColumn(index, l, periphRe)
-	})
-}
-
-// NeighborPeripherals returns slices of index pairs for peripherals defined
-// by regex given lines and indices of target for middle line
-func NeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) int {
-	// indices := make([][]int, 0)
-	// for _, line := range lines {
-
-	// }
-	return Count(lines, func(l string) bool {
-		return AdjacentColumn(index, l, periphRe)
-	})
+	count := 0
+	for _, l := range lines {
+		count += Count(periphRe.FindAllStringIndex(l, -1), func(periphIdx []int) bool {
+			return AdjacentColumn(index, periphIdx)
+		})
+	}
+	return count
 }
 
 // GetTargetIndexes returns indices of all matches for the digit sequence
@@ -163,13 +182,17 @@ func GetTargetIndexes(numberRow string, targetRe *regexp.Regexp) [][]int {
 	return targetRe.FindAllStringIndex(string(numberRow), -1)
 }
 
-// AdjacentColumn checks if the provided string has a peripheral in a column adjcent to the location of an unspecified match string
+func AdjacentColumn(targetIndex []int, peripheralIndex []int) bool {
+	return targetIndex[0] <= peripheralIndex[1] &&
+		peripheralIndex[0] <= targetIndex[1]
+}
+
+// AnyAdjacentColumn checks if the provided string has a peripheral in a column adjcent to the location of an unspecified match string
 // uses the regexp convention of the match string, s[matchIndex[0]:matchIndex[1]]
-func AdjacentColumn(matchIndex []int, searchRow string, periphRe *regexp.Regexp) bool {
+func AnyAdjacentColumn(targetIndex []int, searchRow string, periphRe *regexp.Regexp) bool {
 	// periphRe := regexp.MustCompile(`[^\d\.]`)
 	for _, index := range periphRe.FindAllStringIndex(searchRow, -1) {
-		if matchIndex[0] <= index[1] &&
-			index[0] <= matchIndex[1] {
+		if AdjacentColumn(targetIndex, index) {
 			return true
 		}
 	}

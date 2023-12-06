@@ -62,11 +62,24 @@ func Prod(prod int, i int, _ int) int {
 }
 
 func countSolns(raceDuration int, record int) int {
+	isSoln := func(t int) bool { return (raceDuration-t)*t > record }
+
 	T, dRecord := float64(raceDuration), float64(record)
-	tLowerBound := math.Ceil(T/2. - math.Sqrt(T*T/4.-dRecord))
-	numWins := 2 * int(math.Ceil(T/2)-tLowerBound)
-	if int(T)%2 == 0 {
+	delta := math.Sqrt(T*T/4 - dRecord)
+	lb, ub := T/2-delta, T/2+delta
+	fmt.Printf("lb,ub = (%.2f, %.2f)\n", lb, ub)
+	numWins := int(math.Floor(ub) - math.Ceil(lb) + 1)
+	if !isSoln(int(math.Floor(ub))) {
 		numWins--
 	}
+	if !isSoln(int(math.Ceil(lb))) {
+		numWins--
+	}
+	// if isSoln(int(math.Floor(ub + 1))) {
+	// 	numWins++
+	// }
+	// if isSoln(int(math.Ceil(lb - 1))) {
+	// 	numWins++
+	// }
 	return numWins
 }

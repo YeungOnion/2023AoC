@@ -6,6 +6,7 @@ import (
 
 func TestCounters(t *testing.T) {
 	tests := []struct {
+		name     string
 		duration int
 		record   int
 		expected int
@@ -35,11 +36,23 @@ func TestCounters(t *testing.T) {
 			record:   1200,
 			expected: 39,
 		},
+		{
+			name:     "sample partb",
+			duration: 71530,
+			record:   940200,
+			expected: 71503,
+		},
+		{
+			name:     "solution partb",
+			duration: 62649190,
+			record:   553101014731074,
+			expected: 1,
+		},
 	}
 
 	for _, test := range tests {
 		if got := countSolns(test.duration, test.record); got != test.expected {
-			t.Logf("Fail while testing, (%d, %d)", test.duration, test.record)
+			t.Logf("Fail while testing,\n`%s': (%d, %d)", test.name, test.duration, test.record)
 			t.Fatalf("got: %d, expected: %d", got, test.expected)
 		}
 	}

@@ -1,11 +1,11 @@
 package main
 
 import (
+	"YeungOnion/2023AoC/avl"
 	"bufio"
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -18,9 +18,18 @@ type seedMap struct {
 	window int
 }
 
-type seedRange [2]seedMap
-
-type seedTable []seedMap
+func seedMapCompare(a, b seedMap) avl.Ordering {
+	switch {
+	case a.src == b.src:
+		return avl.Equal
+	case a.src < b.src:
+		return avl.Less
+	case a.src > b.src:
+		return avl.Greater
+	default:
+		panic("unreachable")
+	}
+}
 
 func main() {
 	filename := "05/sample-a.txt"
@@ -40,18 +49,26 @@ func main() {
 	for fileScanner.Scan() { // This scan "eats" the map header
 		fmt.Printf("\nnow: %v\n", seedNums)
 		fmt.Println(fileScanner.Text())
-		lines := ScanWhile(fileScanner, NumberSequenceBuffered)
+		lines := ScanWhile(fileScanner, numberSequenceBuffered)
 		fmt.Println("\t" + strings.Join(lines, "\n\t"))
-		table := ParseRowsToTable(lines)
+
+		seedTable := avl.NewBST[seedMap](seedMapCompare)
+		ParseRowsToTable(lines, seedTable)
 
 		for i, n := range seedNums {
-			nextNums[i] = table.Eval(n)
+			nextNums[i] = SeedTableEval(seedTable, n)
 		}
 		seedNums = nextNums
 	}
 
 	fmt.Printf("now: %v\n\n", seedNums)
 	return
+}
+
+func SeedTableEval(seedTable *avl.BST[seedMap], srcValue int) int {
+	floorNode := seedTable.FloorSearch(seedMap{src: srcValue})
+	fmt.Println(floorNode)
+	return floorNode.Value.Eval(srcValue)
 }
 
 func MustAtoi(s string, _ int) int {
@@ -67,7 +84,7 @@ func ScanSeedLine(fs *bufio.Scanner) []int {
 		panic("ReadSeedLine: expects to call at start of file")
 	}
 
-	seedline := ScanWhile(fs, NumberSequenceBuffered)
+	seedline := ScanWhile(fs, numberSequenceBuffered)
 	if len(seedline) != 1 {
 		panic("ReadSeedLine: expects one line of seeds only")
 	}
@@ -88,15 +105,7 @@ func parseSeedLine(s string) []int {
 	return out
 }
 
-func parseMap(s string) {
-	panic("unimplemented")
-}
-
-func PassthruMap(i int, m seedTable) int {
-	panic("unimplemented")
-}
-
-func NumberSequenceBuffered(fs *bufio.Scanner) bool {
+func numberSequenceBuffered(fs *bufio.Scanner) bool {
 	re := regexp.MustCompile(`(\d+ *)+`)
 	return re.MatchString(fs.Text())
 }
@@ -118,66 +127,26 @@ func ScanWhile(fs *bufio.Scanner, pred func(*bufio.Scanner) bool) []string {
 	return textRows
 }
 
-func ParseRowsToTable(rows []string) seedTable {
+func ParseRowsToTable(rows []string, result *avl.BST[seedMap]) {
 	digitsRe := regexp.MustCompile(`\d+`)
-	s := seedTable(lo.Map(rows, func(item string, index int) seedMap {
+	seedMaps := lo.Map(rows, func(item string, index int) seedMap {
 		nums := lo.Map(digitsRe.FindAllString(item, -1), MustAtoi)
 		return seedMap{src: nums[1], dest: nums[0], window: nums[2]}
-	}))
+	})
 
-	sort.Sort(s)
-
-	return s
-}
-
-// FloorSearch returns the element position that has the largest value of
-// seedMap.src not less than the needle
-func (c seedTable) FloorSearch(needle int) int {
-
-	if len(c) == 0 || needle < c[0].src {
-		// precedes the first (implies all) bin edges
-		// alternatively could have all seedTable's have seedMap{0,0,0}
-		return -1
+	for _, s := range seedMaps {
+		result.Insert(s)
 	}
-
-	var mid int
-	lb, ub := 0, len(c)
-	for lb < ub {
-		mid = (lb + ub) / 2
-		f := c[mid].src
-		if needle == f {
-			return mid
-		} else if needle < f {
-			ub = mid
-		} else {
-			lb = mid + 1
-		}
-	}
-
-	return mid
 
 }
 
-func (c seedTable) Eval(key int) int {
-	index := c.FloorSearch(key)
-	if index == -1 {
+func (t seedMap) String() string {
+	return fmt.Sprintf("\t[%d,%d): [%d,%d)", t.src, t.src+t.window, t.dest, t.dest+t.window)
+}
+
+func (c seedMap) Eval(key int) int {
+	if c.src+c.window <= key {
 		return key
 	}
-	elem := c[index]
-	if elem.src+elem.window <= key {
-		return key
-	}
-	return elem.dest + key - elem.src
-}
-
-func (c seedTable) Len() int {
-	return len(c)
-}
-
-func (c seedTable) Less(i, j int) bool {
-	return c[i].src < c[j].src
-}
-
-func (c seedTable) Swap(i, j int) {
-	c[i], c[j] = c[j], c[i]
+	return c.dest + key - c.src
 }

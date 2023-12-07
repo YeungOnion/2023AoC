@@ -1,6 +1,7 @@
 package main
 
 import (
+	"YeungOnion/2023AoC/avl"
 	"bufio"
 	"fmt"
 	"os"
@@ -37,17 +38,15 @@ func TestSearch(t *testing.T) {
 	}
 
 	// construct sorted table
-	input := seedTable{
-		{src: 50, dest: 52, window: 48},
-		{src: 98, dest: 50, window: 2},
-	}
+	seedTableInput := avl.NewBST[seedMap](seedMapCompare)
+	seedTableInput.Insert(seedMap{src: 50, dest: 52, window: 48})
+	seedTableInput.Insert(seedMap{src: 98, dest: 50, window: 2})
 
 	for _, test := range tests {
-		t.Logf("testing Eval(%d)\n", test.value)
 
-		got := input.Eval(test.value)
+		got := SeedTableEval(seedTableInput, test.value)
 		if got != test.expected {
-			t.Logf("failed test %s,\nEval(%d)\n%v", test.name, test.value, input)
+			t.Logf("failed test %s,\nEval(%d), table =\n%s", test.name, test.value, seedTableInput)
 			t.Fatalf("got %d, expected %d", got, test.expected)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/samber/lo"
 )
@@ -40,6 +41,10 @@ func main() {
 
 	hands, bids := ParseInput(fileScanner)
 
+	types := lo.Map(hands, func(item Hand, _ int) HandType { return EvaluateHandType(item) })
+	fmt.Println(hands)
+	fmt.Println(types)
+
 	ranks := RankHands(hands)
 	fmt.Println(bids)
 	fmt.Println(ranks)
@@ -60,17 +65,23 @@ func Less(a, b Hand) bool {
 	} else {
 		return LessHandString(a, b)
 	}
-
 }
 
 func LessHandString(a, b Hand) bool {
-	// true if a-b < 0
-	aB, bB := []rune(a), []rune(b)
-	cB := make([]int, len(a))
-	for i := range aB {
-		cB[i] = int(aB[i] - bB[i])
-	}
-	return !Any(cB, func(i int) bool { return i < 0 })
+	// true if a < b equiv to all b -a > 0
+	u := EvaluateHandString(a)
+	v := EvaluateHandString(b)
+	// fmt.Printf("\n\t%s -> %v", a, u)
+	// fmt.Printf("\n\t%s -> %v", b, v)
+	return Any(lo.Zip2(u, v), func(tup lo.Tuple2[int, int]) bool { return tup.A < tup.B })
+}
+
+func EvaluateHandString(h Hand) []int {
+	return lo.Map([]rune(h), func(r rune, _ int) int { return EvaluateCard(r) })
+}
+
+func EvaluateCard(r rune) int {
+	return strings.IndexRune("23456789TJQKA", r) + 2
 }
 
 func EvaluateHandType(h Hand) HandType {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/samber/lo"
@@ -106,29 +107,15 @@ func TestSuite1(t *testing.T) {
 			return pair.A * pair.B
 		}))
 
-	expectedRanks := lo.Map[lo.Tuple2[int, int], int](
-		lo.Values(input),
-		func(pair lo.Tuple2[int, int], _ int) int {
-			return pair.B
-		})
-	bids := lo.Map[lo.Tuple2[int, int], int](
-		lo.Values(input),
-		func(pair lo.Tuple2[int, int], _ int) int {
-			return pair.A
-		})
+	handToBids := lo.MapValues(input, func(v lo.Tuple2[int, int], _ Hand) int { return v.A })
 
-	hands := lo.Keys(input)
-	ranks := RankHands(hands)
+	hands := Hands(lo.Keys(input))
+	sort.Sort(hands)
 	winnings := 0
-	for i, rank := range ranks {
-		winnings += rank * bids[i]
+	for i, hand := range hands {
+		winnings += (i + 1) * handToBids[hand]
 	}
 
-	if Any(lo.Zip2[int, int](expectedRanks, ranks), func(tup lo.Tuple2[int, int]) bool {
-		return tup.A != tup.B
-	}) {
-		t.Logf("mismatch of ranks\n%v, hands\n%v, expected\n%v, got\n", hands, expectedRanks, ranks)
-	}
 	if expectedWinnings != winnings {
 		t.Fatalf("winnings mismatched, got %d, expected %d", winnings, expectedWinnings)
 	}

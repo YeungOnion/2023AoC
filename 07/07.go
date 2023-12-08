@@ -1,6 +1,7 @@
 package main
 
 import (
+	"YeungOnion/2023AoC/utils"
 	"bufio"
 	"fmt"
 	"os"
@@ -69,7 +70,7 @@ func LessHandString(a, b Hand) bool {
 	v := EvaluateHandString(b)
 	// fmt.Printf("\n\t%s -> %v", a, u)
 	// fmt.Printf("\n\t%s -> %v", b, v)
-	return Any(lo.Zip2(u, v), func(tup lo.Tuple2[int, int]) bool { return tup.A < tup.B })
+	return utils.Any(lo.Zip2(u, v), func(tup lo.Tuple2[int, int]) bool { return tup.A < tup.B })
 }
 
 func EvaluateHandString(h Hand) []int {
@@ -136,25 +137,4 @@ func (s Hands) Less(i, j int) bool {
 
 func (s Hands) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
-}
-
-// Any is a short circuit at first true of Reduce(iterable ~[]V, predicate func(V) bool) bool
-func Any[T ~[]V, V any](t T, pred func(V) bool) bool {
-	for _, v := range t {
-		b := pred(v)
-		if b {
-			return true
-		}
-	}
-	return false
-}
-
-// All is a short circuit at first false of Reduce(iterable ~[]V, predicate func(V) bool) bool
-func All[T ~[]V, V any](t T, pred func(V) bool) bool {
-	for _, v := range t {
-		if !pred(v) {
-			return false
-		}
-	}
-	return true
 }

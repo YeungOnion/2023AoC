@@ -41,24 +41,21 @@ func main() {
 
 	hands, bids := ParseInput(fileScanner)
 
-	types := lo.Map(hands, func(item Hand, _ int) HandType { return EvaluateHandType(item) })
-	fmt.Println(hands)
-	fmt.Println(types)
-
-	ranks := RankHands(hands)
-	fmt.Println(bids)
-	fmt.Println(ranks)
+	handToBids := make(map[Hand]int, len(hands))
+	for i := range hands {
+		handToBids[hands[i]] = bids[i]
+	}
+	sort.Sort(hands)
 
 	winnings := 0
-	for i, rank := range ranks {
-		winnings += rank * bids[i]
+	for i, hand := range hands {
+		winnings += (i + 1) * handToBids[hand]
 	}
 
 	fmt.Println("winnings: ", winnings)
 }
 
 func Less(a, b Hand) bool {
-
 	aType, bType := EvaluateHandType(a), EvaluateHandType(b)
 	if aType != bType {
 		return aType < bType
@@ -68,7 +65,6 @@ func Less(a, b Hand) bool {
 }
 
 func LessHandString(a, b Hand) bool {
-	// true if a < b equiv to all b -a > 0
 	u := EvaluateHandString(a)
 	v := EvaluateHandString(b)
 	// fmt.Printf("\n\t%s -> %v", a, u)
@@ -115,7 +111,7 @@ func EvaluateHandType(h Hand) HandType {
 	}
 }
 
-func ParseInput(fs *bufio.Scanner) ([]Hand, []int) {
+func ParseInput(fs *bufio.Scanner) (Hands, []int) {
 	hands, bids := make([]Hand, 0), make([]int, 0)
 	for fs.Scan() {
 		hand := Hand(fs.Text())
@@ -125,46 +121,20 @@ func ParseInput(fs *bufio.Scanner) ([]Hand, []int) {
 		hands = append(hands, hand)
 		bids = append(bids, bid)
 	}
-	return hands, bids
+	return Hands(hands), bids
 }
 
-// RankHands returns n element slice from (0,n) such that
-func RankHands(hands []Hand) []int {
-	indexedHands := NewIndexPairing(hands)
-	sort.Sort(indexedHands)
-	// N := len(hands)
-	result := make([]int, len(hands))
-	for i, v := range indexedHands {
-		result[i] = v.initPos + 1
-	}
-	return result
-}
+type Hands []Hand
 
-type indexPair struct {
-	hand    Hand
-	initPos int
-}
-
-type indexPairSlice []indexPair
-
-func NewIndexPairing(s []Hand) indexPairSlice {
-	result := make([]indexPair, len(s))
-
-	for i, v := range s {
-		result[i] = indexPair{hand: v, initPos: i}
-	}
-	return result
-}
-
-func (s indexPairSlice) Len() int {
+func (s Hands) Len() int {
 	return len(s)
 }
 
-func (s indexPairSlice) Less(i, j int) bool {
-	return Less(s[i].hand, s[j].hand)
+func (s Hands) Less(i, j int) bool {
+	return Less(s[i], s[j])
 }
 
-func (s indexPairSlice) Swap(i, j int) {
+func (s Hands) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 

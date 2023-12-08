@@ -2,6 +2,7 @@ package main
 
 import (
 	"YeungOnion/2023AoC/avl"
+	"YeungOnion/2023AoC/utils"
 	"bufio"
 	"fmt"
 	"os"
@@ -12,13 +13,43 @@ import (
 	"github.com/samber/lo"
 )
 
-type seedMap struct {
+type SeedMap struct {
 	src    int
 	dest   int
 	window int
 }
 
-func seedMapCompare(a, b seedMap) avl.Ordering {
+func main() {
+	filename := os.Args[1]
+	if filename == "--" {
+		filename = os.Args[2]
+	}
+
+	// stream file by words
+	file, err := os.Open(filename)
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	nextNums := ScanSeedLine(fileScanner)
+
+	for fileScanner.Scan() { // This scan "eats" the map header
+		lines := utils.ScanWhile(fileScanner, numberSequenceBuffered)
+
+		seedTable := avl.NewBST[SeedMap](seedMapCompare)
+		ParseRowsToTable(lines, seedTable)
+
+		lo.Map(nextNums, func(n int, _ int) int { return SeedTableEval(seedTable, n) })
+	}
+
+	fmt.Printf("now: %v\n\n", nextNums)
+	return
+}
+
+func seedMapCompare(a, b SeedMap) avl.Ordering {
 	switch {
 	case a.src == b.src:
 		return avl.Equal
@@ -31,43 +62,8 @@ func seedMapCompare(a, b seedMap) avl.Ordering {
 	}
 }
 
-func main() {
-	filename := "05/sample-a.txt"
-
-	// stream file by words
-	file, err := os.Open(filename)
-	defer file.Close()
-	if err != nil {
-		panic(err)
-	}
-	fileScanner := bufio.NewScanner(file)
-	fileScanner.Split(bufio.ScanLines)
-
-	seedNums := ScanSeedLine(fileScanner)
-
-	nextNums := make([]int, len(seedNums))
-	for fileScanner.Scan() { // This scan "eats" the map header
-		fmt.Printf("\nnow: %v\n", seedNums)
-		fmt.Println(fileScanner.Text())
-		lines := ScanWhile(fileScanner, numberSequenceBuffered)
-		fmt.Println("\t" + strings.Join(lines, "\n\t"))
-
-		seedTable := avl.NewBST[seedMap](seedMapCompare)
-		ParseRowsToTable(lines, seedTable)
-
-		for i, n := range seedNums {
-			nextNums[i] = SeedTableEval(seedTable, n)
-		}
-		seedNums = nextNums
-	}
-
-	fmt.Printf("now: %v\n\n", seedNums)
-	return
-}
-
-func SeedTableEval(seedTable *avl.BST[seedMap], srcValue int) int {
-	floorNode := seedTable.FloorSearch(seedMap{src: srcValue})
-	fmt.Println(floorNode)
+func SeedTableEval(seedTable *avl.BST[SeedMap], srcValue int) int {
+	floorNode := seedTable.FloorSearch(SeedMap{src: srcValue})
 	return floorNode.Value.Eval(srcValue)
 }
 
@@ -84,15 +80,15 @@ func ScanSeedLine(fs *bufio.Scanner) []int {
 		panic("ReadSeedLine: expects to call at start of file")
 	}
 
-	seedline := ScanWhile(fs, numberSequenceBuffered)
+	seedline := utils.ScanWhile(fs, numberSequenceBuffered)
 	if len(seedline) != 1 {
 		panic("ReadSeedLine: expects one line of seeds only")
 	}
 
-	return parseSeedLine(seedline[0])
+	return ParseSeedLine(seedline[0])
 }
 
-func parseSeedLine(s string) []int {
+func ParseSeedLine(s string) []int {
 	out := make([]int, 0, 16)
 	scan := bufio.NewScanner(strings.NewReader(s))
 	scan.Split(bufio.ScanWords)
@@ -110,28 +106,11 @@ func numberSequenceBuffered(fs *bufio.Scanner) bool {
 	return re.MatchString(fs.Text())
 }
 
-// ScanWhile consumes input from scanner via Scan, if Scanned matches the predicate
-// Then the text it appended to a string slice output
-func ScanWhile(fs *bufio.Scanner, pred func(*bufio.Scanner) bool) []string {
-	textRows := make([]string, 0, 16)
-	for fs.Scan() {
-		text := fs.Text()
-		if !pred(fs) {
-			break
-		} else {
-			textRows = append(textRows, text)
-		}
-
-	}
-
-	return textRows
-}
-
-func ParseRowsToTable(rows []string, result *avl.BST[seedMap]) {
+func ParseRowsToTable(rows []string, result *avl.BST[SeedMap]) {
 	digitsRe := regexp.MustCompile(`\d+`)
-	seedMaps := lo.Map(rows, func(item string, index int) seedMap {
+	seedMaps := lo.Map(rows, func(item string, index int) SeedMap {
 		nums := lo.Map(digitsRe.FindAllString(item, -1), MustAtoi)
-		return seedMap{src: nums[1], dest: nums[0], window: nums[2]}
+		return SeedMap{src: nums[1], dest: nums[0], window: nums[2]}
 	})
 
 	for _, s := range seedMaps {
@@ -140,11 +119,11 @@ func ParseRowsToTable(rows []string, result *avl.BST[seedMap]) {
 
 }
 
-func (t seedMap) String() string {
+func (t SeedMap) String() string {
 	return fmt.Sprintf("\t[%d,%d): [%d,%d)", t.src, t.src+t.window, t.dest, t.dest+t.window)
 }
 
-func (c seedMap) Eval(key int) int {
+func (c SeedMap) Eval(key int) int {
 	if c.src+c.window <= key {
 		return key
 	}

@@ -38,9 +38,9 @@ func TestSearch(t *testing.T) {
 	}
 
 	// construct sorted table
-	seedTableInput := avl.NewBST[seedMap](seedMapCompare)
-	seedTableInput.Insert(seedMap{src: 50, dest: 52, window: 48})
-	seedTableInput.Insert(seedMap{src: 98, dest: 50, window: 2})
+	seedTableInput := avl.NewBST[SeedMap](seedMapCompare)
+	seedTableInput.Insert(SeedMap{src: 50, dest: 52, window: 48})
+	seedTableInput.Insert(SeedMap{src: 98, dest: 50, window: 2})
 
 	for _, test := range tests {
 

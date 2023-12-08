@@ -1,6 +1,7 @@
 package main
 
 import (
+	"YeungOnion/2023AoC/utils"
 	"bufio"
 	"fmt"
 	"os"
@@ -159,7 +160,7 @@ func NeighborPeripherals(index []int, lines []string, perhiphRe *regexp.Regexp) 
 // HasNeighborPeripherals identifies if any of the provided lines have
 // peripherals defined by regex are column adjacent to the indices specified
 func HasNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) bool {
-	return Any(lines, func(l string) bool {
+	return utils.Any(lines, func(l string) bool {
 		return AnyAdjacentColumn(index, l, periphRe)
 	})
 }
@@ -169,7 +170,7 @@ func HasNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp
 func CountNeighborPeripherals(index []int, lines []string, periphRe *regexp.Regexp) int {
 	count := 0
 	for _, l := range lines {
-		count += Count(periphRe.FindAllStringIndex(l, -1), func(periphIdx []int) bool {
+		count += utils.Count(periphRe.FindAllStringIndex(l, -1), func(periphIdx []int) bool {
 			return AdjacentColumn(index, periphIdx)
 		})
 	}
@@ -197,36 +198,4 @@ func AnyAdjacentColumn(targetIndex []int, searchRow string, periphRe *regexp.Reg
 		}
 	}
 	return false
-}
-
-// All is a short circuit at first false of Reduce(iterable ~[]V, predicate func(V) bool) bool
-func All[T ~[]V, V any](t T, pred func(V) bool) bool {
-	for _, v := range t {
-		if !pred(v) {
-			return false
-		}
-	}
-	return true
-}
-
-// Any is a short circuit at first true of Reduce(iterable ~[]V, predicate func(V) bool) bool
-func Any[T ~[]V, V any](t T, pred func(V) bool) bool {
-	for _, v := range t {
-		b := pred(v)
-		if b {
-			return true
-		}
-	}
-	return false
-}
-
-// Count returns the number of elements from the iterable that match the predicate
-func Count[T ~[]V, V any](t T, pred func(V) bool) int {
-	count := 0
-	for _, v := range t {
-		if pred(v) {
-			count++
-		}
-	}
-	return count
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"os"
 )
 
 // scanWhile consumes input from scanner via Scan, if Scanned matches the predicate
@@ -49,4 +50,14 @@ func Count[T ~[]V, V any](t T, pred func(V) bool) int {
 		}
 	}
 	return count
+}
+
+// FileScanner opens a file and returns a scanner and a handle to close the file
+func FileScanner(filename string) (*bufio.Scanner, func() error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		file.Close()
+		panic(err)
+	}
+	return bufio.NewScanner(file), file.Close
 }

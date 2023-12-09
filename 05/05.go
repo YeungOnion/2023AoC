@@ -4,7 +4,6 @@ import (
 	"YeungOnion/2023AoC/avl"
 	"YeungOnion/2023AoC/utils"
 	"bufio"
-	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -13,9 +12,8 @@ import (
 	"github.com/samber/lo"
 )
 
-type SeedMap struct {
-	src    int
-	dest   int
+type Interval struct {
+	key    int
 	window int
 }
 
@@ -25,54 +23,35 @@ func main() {
 		filename = os.Args[2]
 	}
 
-	// stream file by words
-	file, err := os.Open(filename)
-	defer file.Close()
-	if err != nil {
-		panic(err)
-	}
-	fileScanner := bufio.NewScanner(file)
-	fileScanner.Split(bufio.ScanLines)
-
-	nextNums := ScanSeedLine(fileScanner)
-
-	for fileScanner.Scan() { // This scan "eats" the map header
-		fmt.Println(fileScanner.Text())
-		fmt.Printf("now: %v\n", nextNums)
-		lines := utils.ScanWhile(fileScanner, numberSequenceBuffered)
-
-		// new map
-		seedTable := avl.NewBST[SeedMap](seedMapCompare)
-		ParseRowsToTable(lines, seedTable)
-
-		nextNums = lo.Map(nextNums, func(n int, _ int) int { return SeedTableEval(seedTable, n) })
-	}
-	fmt.Printf("final state: %v\n", nextNums)
-	fmt.Print("min: ", lo.Min(nextNums))
+	fs, fileCloseHandle := utils.FileScanner(filename)
+	defer fileCloseHandle()
+	fs.Split(bufio.ScanLines)
 
 	return
 }
 
-func seedMapCompare(a, b SeedMap) avl.Ordering {
-	switch {
-	case a.src == b.src:
-		return avl.Equal
-	case a.src < b.src:
-		return avl.Less
-	case a.src > b.src:
-		return avl.Greater
-	default:
-		panic("unreachable")
+func ParseAllTables(fs *bufio.Scanner) []*avl.BST[SeedMap] {
+	tables := make([]*avl.BST[SeedMap], 7)
+
+	for i := 0; fs.Scan(); i++ { // This scan "eats" the map header
+		lines := utils.ScanWhile(fs, numberSequenceBuffered)
+		seedTable := avl.NewBST[SeedMap](seedMapCompare)
+		ParseRowsToTable(lines, seedTable)
+		tables[i] = seedTable
 	}
+
+	return tables
 }
 
-func SeedTableEval(seedTable *avl.BST[SeedMap], keyValue int) int {
-	floorNode := seedTable.FloorSearch(SeedMap{src: keyValue})
-	if floorNode != nil {
-		return floorNode.Value.Eval(keyValue)
-	} else {
-		return SeedMap{}.Eval(keyValue)
+func PushThroughMaps(tables []*avl.BST[SeedMap], value int) int {
+	if len(tables) == 0 {
+		return value
 	}
+
+	return PushThroughMaps(
+		tables[1:],
+		SeedTableEval(tables[0], value),
+	)
 }
 
 func MustAtoi(s string, _ int) int {
@@ -93,20 +72,13 @@ func ScanSeedLine(fs *bufio.Scanner) []int {
 		panic("ReadSeedLine: expects one line of seeds only")
 	}
 
-	return ParseSeedLine(seedline[0])
-}
-
-func ParseSeedLine(s string) []int {
-	out := make([]int, 0, 16)
-	scan := bufio.NewScanner(strings.NewReader(s))
-	scan.Split(bufio.ScanWords)
-
-	for scan.Scan() {
-		if num, err := strconv.Atoi(scan.Text()); err == nil {
-			out = append(out, num)
+	result := make([]int, 0, 16)
+	for _, text := range strings.Fields(seedline[0]) {
+		if num, err := strconv.Atoi(text); err == nil {
+			result = append(result, num)
 		}
 	}
-	return out
+	return result
 }
 
 func numberSequenceBuffered(fs *bufio.Scanner) bool {
@@ -116,36 +88,14 @@ func numberSequenceBuffered(fs *bufio.Scanner) bool {
 
 func ParseRowsToTable(rows []string, result *avl.BST[SeedMap]) {
 	digitsRe := regexp.MustCompile(`\d+`)
-	seedMaps := lo.Map(rows, func(item string, index int) SeedMap {
-		nums := lo.Map(digitsRe.FindAllString(item, -1), MustAtoi)
-		return SeedMap{src: nums[1], dest: nums[0], window: nums[2]}
-	})
+	seedMaps := lo.Map(
+		rows,
+		func(item string, index int) SeedMap {
+			nums := lo.Map(digitsRe.FindAllString(item, -1), MustAtoi)
+			return SeedMap{src: nums[1], dest: nums[0], window: nums[2]}
+		})
 
 	for _, s := range seedMaps {
 		result.Insert(s)
 	}
-
-}
-
-func (t SeedMap) String() string {
-	return fmt.Sprintf("\t[%d,%d): [%d,%d)", t.src, t.src+t.window, t.dest, t.dest+t.window)
-}
-
-func (c SeedMap) Eval(key int) int {
-	if c.src+c.window <= key {
-		return key
-	}
-	return c.dest + key - c.src
-}
-
-type SeedTable avl.BST[SeedMap]
-
-func (table SeedTable) String() string {
-	s := make([]SeedMap, 0, 1<<table.Root.Height)
-	avl.InOrderTraversal[SeedMap](table.Root, &s)
-	return strings.Join(
-		lo.Map(s, func(m SeedMap, _ int) string { return m.String() }),
-		"\n",
-	)
-
 }

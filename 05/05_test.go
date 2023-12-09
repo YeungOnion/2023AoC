@@ -2,6 +2,7 @@ package main
 
 import (
 	"YeungOnion/2023AoC/avl"
+	"YeungOnion/2023AoC/utils"
 	"bufio"
 	"fmt"
 	"os"
@@ -71,4 +72,32 @@ func TestSampleA(t *testing.T) {
 			seedNums, expectedSeeds)
 	}
 
+}
+
+func TestPartA(t *testing.T) {
+	filename := "input.txt"
+	expected := 226172555
+
+	// stream file by words
+	fs, closeHandle := utils.FileScanner(filename)
+	defer closeHandle()
+	fs.Split(bufio.ScanLines)
+
+	seedNums := ScanSeedLine(fs)
+	tables := ParseAllTables(fs)
+
+	var minVal int
+	for i, seed := range seedNums {
+		val := PushThroughMaps(tables, seed)
+		if i == 0 || val < minVal {
+			minVal = val
+		}
+	}
+
+	fmt.Println("min location: ", minVal)
+	if got := minVal; expected != got {
+		t.Fatalf("failed part a, expected %d, got %d", expected, got)
+	}
+
+	return
 }

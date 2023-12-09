@@ -16,6 +16,10 @@ func TestSearch(t *testing.T) {
 		expected int
 	}{
 		{
+			value:    10,
+			expected: 10,
+		},
+		{
 			value:    79,
 			expected: 81,
 		},
@@ -31,23 +35,19 @@ func TestSearch(t *testing.T) {
 			value:    100,
 			expected: 100,
 		},
-		{
-			value:    10,
-			expected: 10,
-		},
 	}
 
 	// construct sorted table
 	seedTableInput := avl.NewBST[SeedMap](seedMapCompare)
 	seedTableInput.Insert(SeedMap{src: 50, dest: 52, window: 48})
 	seedTableInput.Insert(SeedMap{src: 98, dest: 50, window: 2})
+	t.Log("var input seedTable:=\n", seedTableInput)
 
 	for _, test := range tests {
 
 		got := SeedTableEval(seedTableInput, test.value)
 		if got != test.expected {
-			t.Logf("failed test %s,\nEval(%d), table =\n%s", test.name, test.value, seedTableInput)
-			t.Fatalf("got %d, expected %d", got, test.expected)
+			t.Fatalf("input: %d\ngot %d, expected %d", test.value, got, test.expected)
 		}
 	}
 	return

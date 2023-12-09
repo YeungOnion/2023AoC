@@ -205,27 +205,30 @@ func searchNode[T any](root *Node[T], value T, compareFunc CompareFunc[T]) *Node
 	return searchNode(root.Right, value, compareFunc)
 }
 
-func floorSearchNode[T any](root *Node[T], value T, compareFunc CompareFunc[T]) *Node[T] {
+func floorSearchNode[T any](root *Node[T], needle T, compareFunc CompareFunc[T]) *Node[T] {
 	if root == nil {
-		return root
+		return nil
 	}
 
-	switch compareFunc(value, root.Value) {
+	switch compareFunc(needle, root.Value) {
 	case Equal:
 		return root
+	case Greater:
+		if f := floorSearchNode(root.Right, needle, compareFunc); f != nil {
+			return f
+		} else {
+			// root.Right is larger than needle, so root is as big as it gets
+			return root
+		}
 	case Less:
-		if f := floorSearchNode(root.Left, value, compareFunc); f == nil {
+		if root.Left == nil {
+			// want to return parent
 			return nil
 		} else {
-			return f
-		}
-	case Greater:
-		if f := floorSearchNode(root.Right, value, compareFunc); f == nil {
-			return root.Right
-		} else {
-			return f
+			// still too big, keep heading left
+			return floorSearchNode(root.Left, needle, compareFunc)
 		}
 	default:
-		panic("comparison yielded unexpected value")
+		panic("unreachable: `compareFunc' provided unexpected value")
 	}
 }

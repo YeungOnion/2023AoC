@@ -37,15 +37,19 @@ func main() {
 	nextNums := ScanSeedLine(fileScanner)
 
 	for fileScanner.Scan() { // This scan "eats" the map header
+		fmt.Println(fileScanner.Text())
+		fmt.Printf("now: %v\n", nextNums)
 		lines := utils.ScanWhile(fileScanner, numberSequenceBuffered)
 
+		// new map
 		seedTable := avl.NewBST[SeedMap](seedMapCompare)
 		ParseRowsToTable(lines, seedTable)
 
-		lo.Map(nextNums, func(n int, _ int) int { return SeedTableEval(seedTable, n) })
+		nextNums = lo.Map(nextNums, func(n int, _ int) int { return SeedTableEval(seedTable, n) })
 	}
+	fmt.Printf("final state: %v\n", nextNums)
+	fmt.Print("min: ", lo.Min(nextNums))
 
-	fmt.Printf("now: %v\n\n", nextNums)
 	return
 }
 
@@ -62,9 +66,13 @@ func seedMapCompare(a, b SeedMap) avl.Ordering {
 	}
 }
 
-func SeedTableEval(seedTable *avl.BST[SeedMap], srcValue int) int {
-	floorNode := seedTable.FloorSearch(SeedMap{src: srcValue})
-	return floorNode.Value.Eval(srcValue)
+func SeedTableEval(seedTable *avl.BST[SeedMap], keyValue int) int {
+	floorNode := seedTable.FloorSearch(SeedMap{src: keyValue})
+	if floorNode != nil {
+		return floorNode.Value.Eval(keyValue)
+	} else {
+		return SeedMap{}.Eval(keyValue)
+	}
 }
 
 func MustAtoi(s string, _ int) int {
@@ -128,4 +136,16 @@ func (c SeedMap) Eval(key int) int {
 		return key
 	}
 	return c.dest + key - c.src
+}
+
+type SeedTable avl.BST[SeedMap]
+
+func (table SeedTable) String() string {
+	s := make([]SeedMap, 0, 1<<table.Root.Height)
+	avl.InOrderTraversal[SeedMap](table.Root, &s)
+	return strings.Join(
+		lo.Map(s, func(m SeedMap, _ int) string { return m.String() }),
+		"\n",
+	)
+
 }

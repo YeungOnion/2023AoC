@@ -22,33 +22,42 @@ func main() {
 
 	fs.Split(bufio.ScanLines)
 
-	accum := 0
+	prevAccum, nextAccum := 0, 0
 	for fs.Scan() {
 		seq := ParseLine(fs.Text())
-		nextVal := ExtrapFromSeq(seq)
-		accum += nextVal
+		prevVal, nextVal := ExtrapFromSeq(seq)
+		// fmt.Println("extrap: ", prevVal, nextVal)
+		nextAccum = nextVal + nextAccum
+		prevAccum = prevVal + prevAccum
 	}
-	fmt.Println("total: ", accum)
+	fmt.Println("part a: ", nextAccum, "part b: ", prevAccum)
 	return
 }
 
-func ExtrapFromSeq(seq []int) int {
-	accum, _ := lo.Last(seq)
-	allSame := func(s []int) bool {
-		return lo.EveryBy(s, func(x int) bool { return x == s[0] })
-	}
+func ExtrapFromSeq(seq []int) (int, int) {
+	heads, tails := make([]int, 0, len(seq)), make([]int, 0, len(seq))
+	heads, tails = append(heads, seq[0]), append(tails, seq[len(seq)-1])
 
-	for !allSame(seq) {
+	for !utils.All(seq, func(x int) bool { return x == seq[0] }) {
 		seq = FiniteDiff(seq)
-		val, _ := lo.Last(seq)
-		accum += val
+		heads = append(heads, seq[0])
+		tails = append(tails, seq[len(seq)-1])
 	}
 
-	return accum
+	prev := lo.ReduceRight(
+		heads,
+		func(agg int, item int, _ int) int {
+			return item - agg
+		},
+		0,
+	)
+	next := lo.Sum(tails)
+
+	return prev, next
 }
 
 func ParseLine(line string) []int {
-	digitsRe := regexp.MustCompile(`\d+`)
+	digitsRe := regexp.MustCompile(`-?\d+`)
 	seqDigits := digitsRe.FindAllString(line, -1)
 	return lo.Map(seqDigits, utils.MustAtoi)
 }
@@ -78,6 +87,11 @@ func FDtoConst(in []int) [][]int {
 	}
 	return seqs
 }
+
+// below this point uses a solution that's unnecessary
+// the idea was to use polynomial extrapolation for a length k subsequence
+// for increasing k to find the polynomial order that matches
+// and using that to extrapolate the first and last elements
 
 func BinomialCoefMemo(bufferSize int) func(int, int) int {
 	memo := make(map[int][]int, bufferSize)
@@ -110,7 +124,6 @@ func LagrangePolyExtrap(seq []int, BinCoef func(int, int) int) int {
 	if BinCoef != nil {
 		BinCoef = BinomialCoefMemo(k)
 	}
-
 	coefs := lo.Map(lo.Range(k), func(j, _ int) int {
 		var sign int
 		if (k-j)%2 == 1 {
@@ -120,7 +133,6 @@ func LagrangePolyExtrap(seq []int, BinCoef func(int, int) int) int {
 		}
 		return sign * BinCoef(k, j)
 	})
-
 	return lo.Sum(iter.Zip2With(coefs, seq, func(c, s int) int {
 		return c * s
 	}))

@@ -3,6 +3,8 @@ package utils
 import (
 	"bufio"
 	"os"
+	"regexp"
+	"strconv"
 )
 
 // scanWhile consumes input from scanner via Scan, if Scanned matches the predicate
@@ -18,6 +20,11 @@ func ScanWhile(fs *bufio.Scanner, pred func(*bufio.Scanner) bool) []string {
 		}
 	}
 	return textRows
+}
+
+func numberSequenceBuffered(fs *bufio.Scanner) bool {
+	re := regexp.MustCompile(`(\d+ *)+`)
+	return re.MatchString(fs.Text())
 }
 
 // All is a short circuit at first false of Reduce(iterable ~[]V, predicate func(V) bool) bool
@@ -60,4 +67,13 @@ func FileScanner(filename string) (*bufio.Scanner, func() error) {
 		panic(err)
 	}
 	return bufio.NewScanner(file), file.Close
+}
+
+// MustAtoi is used in tandem with lo.Map
+func MustAtoi(s string, _ int) int {
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return val
 }

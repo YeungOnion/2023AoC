@@ -7,9 +7,13 @@ import (
 	"strconv"
 )
 
-// scanWhile consumes input from scanner via Scan, if Scanned matches the predicate
+// ScanWhile consumes input from scanner via Scan, if Scanned matches the predicate
 // Then the text it appended to a string slice output
 func ScanWhile(fs *bufio.Scanner, pred func(*bufio.Scanner) bool) []string {
+	if pred == nil {
+		pred = func(*bufio.Scanner) bool { return true }
+	}
+
 	textRows := make([]string, 0, 16)
 	for fs.Scan() {
 		text := fs.Text()
@@ -20,6 +24,20 @@ func ScanWhile(fs *bufio.Scanner, pred func(*bufio.Scanner) bool) []string {
 		}
 	}
 	return textRows
+}
+
+// ScanWhileString accumulates text until the predicatedScan is false
+// and emits that text
+func ScanWhileString(fs *bufio.Scanner, predicatedScan func(*bufio.Scanner) (string, bool)) []string {
+	lines := make([]string, 0, 16)
+	for {
+		if s, ok := predicatedScan(fs); !ok {
+			break
+		} else {
+			lines = append(lines, s)
+		}
+	}
+	return lines
 }
 
 func numberSequenceBuffered(fs *bufio.Scanner) bool {

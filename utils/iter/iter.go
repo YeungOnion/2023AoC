@@ -56,7 +56,7 @@ func Zip2With[T any, U any, R any](a []T, b []U, iteratee func(T, U) R) []R {
 	)
 }
 
-func Scan[T any, R any](collection []T, iteratee func(R, T) R, base R) []R {
+func Scan[T any, R any, C ~[]T](collection C, iteratee func(R, T) R, base R) []R {
 	result := make([]R, len(collection))
 	prev := base
 	for i := 0; i < len(collection); i++ {
@@ -64,4 +64,24 @@ func Scan[T any, R any](collection []T, iteratee func(R, T) R, base R) []R {
 		prev = result[i]
 	}
 	return result
+}
+
+func MapSeq[T any, R any, C ~[]T](collection C, iteratee func(T, int) R) []R {
+	return lo.Map[T, R](collection, iteratee)
+}
+
+func Map[T any, R any, C ~[]T](collection C, iteratee func(T) R) []R {
+	return lo.Map[T, R](collection, func(item T, _ int) R { return iteratee(item) })
+}
+
+func MapReduce[T any, R any, S any, C ~[]T](collection C, transform func(T) R, aggregator func(S, R) S, initial S) S {
+	return lo.Reduce[R, S](
+		Map[T, R, C](collection, transform),
+		func(agg S, item R, _ int) S { return aggregator(agg, item) },
+		initial,
+	)
+}
+
+func MapReduceSeq[T any, R any, S any, C ~[]T](collection C, transform func(T, int) R, aggregator func(S, R, int) S, initial S) S {
+	return lo.Reduce[R, S](lo.Map[T, R](collection, transform), aggregator, initial)
 }
